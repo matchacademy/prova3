@@ -130,7 +130,7 @@ button:active {
       <p class="text-ink/60 text-sm mb-6">Inserisci i tuoi dati ed imposta una password per entrare nell'Arena.</p>
 
       <div id="onboarding-loading" class="text-center py-8 text-sm text-ink/50">
-        <p>Caricamento opzioni universitarie in corso...</p>
+        <p>Caricamento opzioni facolta in corso...</p>
       </div>
 
       <form id="form-onboarding" class="space-y-4 hidden">
@@ -471,6 +471,16 @@ document.getElementById("input-descrizione").addEventListener("input", (e) => {
   document.getElementById("bio-char-counter").textContent = `${e.target.value.length}/60`;
 });
 
+function popolaSelettoreSemplice(id, placeholder, opzioni) {
+  const select = document.getElementById(id);
+  select.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+  opzioni.forEach(opt => {
+    const el = document.createElement("option");
+    el.value = opt;
+    el.textContent = opt;
+    select.appendChild(el);
+  });
+}
 /* =====================================================================
    FASE 1: DOWNLOAD DATABASE OPZIONI UNIVERISITÀ
    ===================================================================== */
@@ -483,17 +493,8 @@ async function inizializzaOpzioniOnboarding() {
     const json = JSON.parse(testo.substring(inizio, fine + 1));
     const righe = json.table.rows || [];
 
-    let mappaDatiFacolta = {}; // Struttura: { "Medicina": { "Anatomia": ["Prof. Rossi"], "Fisiologia": ["Prof. Bianchi"] } }
-
-async function inizializzaOpzioniOnboarding() {
-  try {
-    const risposta = await fetch(URL_SHEET_OPZIONI);
-    const testo = await risposta.text();
-    const inizio = testo.indexOf("{"); const fine = testo.lastIndexOf("}");
-    const json = JSON.parse(testo.substring(inizio, fine + 1));
-    const righe = json.table.rows || [];
-
-    mappaDatiFacolta = {}; 
+    // Definiamo la variabile qui dentro
+    window.mappaDatiFacolta = {}; 
 
     righe.forEach(riga => {
       const c = riga?.c || [];
@@ -502,26 +503,15 @@ async function inizializzaOpzioniOnboarding() {
       const prof = c[2]?.v?.toString().trim();
 
       if (facolta && materia && prof) {
-        if (!mappaDatiFacolta[facolta]) mappaDatiFacolta[facolta] = {};
-        if (!mappaDatiFacolta[facolta][materia]) mappaDatiFacolta[facolta][materia] = [];
-        if (!mappaDatiFacolta[facolta][materia].includes(prof)) mappaDatiFacolta[facolta][materia].push(prof);
+        if (!window.mappaDatiFacolta[facolta]) window.mappaDatiFacolta[facolta] = {};
+        if (!window.mappaDatiFacolta[facolta][materia]) window.mappaDatiFacolta[facolta][materia] = [];
+        if (!window.mappaDatiFacolta[facolta][materia].includes(prof)) window.mappaDatiFacolta[facolta][materia].push(prof);
       }
     });
 
-    // Popola il menu facoltà
-    popolaSelettoreSemplice("input-facolta", "Seleziona facoltà...", Object.keys(mappaDatiFacolta));
+    popolaSelettoreSemplice("input-facolta", "Seleziona facoltà...", Object.keys(window.mappaDatiFacolta));
   } catch (err) { console.error("Errore init:", err); }
 }
-
-// Quando cambi Facoltà -> si sbloccano le materie
-document.getElementById("input-facolta").addEventListener("change", (e) => {
-  const facolta = e.target.value;
-  // Qui popoli il menu materie nella Dashboard quando l'utente vuole aggiungere un esame
-  const selectMateria = document.getElementById("select-materia");
-  popolaSelettoreSemplice("select-materia", "Scegli materia...", Object.keys(mappaDatiFacolta[facolta]));
-});
-}
-
 /* =====================================================================
    FASE 1.1: LOGIN UTENTE
    ===================================================================== */
@@ -574,7 +564,7 @@ document.getElementById("form-onboarding").addEventListener("submit", async (e) 
   
   const nuovoUtente = {
     username: username, elo: 1000, password: password, descrizione: descrizione,
-    universita: document.getElementById("input-universita").value,
+    facolta: document.getElementById("input-facolta").value,
     sede: document.getElementById("input-sede").value,
     eta: document.getElementById("input-eta").value,
     genere: document.getElementById("input-genere").value
@@ -585,7 +575,7 @@ document.getElementById("form-onboarding").addEventListener("submit", async (e) 
   formData.append("username", nuovoUtente.username);
   formData.append("password", nuovoUtente.password);
   formData.append("descrizione", nuovoUtente.descrizione);
-  formData.append("universita", nuovoUtente.universita);
+  formData.append("facolta", nuovoUtente.facolta);
   formData.append("sede", nuovoUtente.sede);
   formData.append("eta", nuovoUtente.eta);
   formData.append("genere", nuovoUtente.genere);
@@ -612,7 +602,7 @@ document.getElementById("form-onboarding").addEventListener("submit", async (e) 
    ===================================================================== */
 function apriDashboardHome() {
   document.getElementById("dash-username").textContent = "@" + utenteLoggato.username;
-  document.getElementById("dash-info-profilo").textContent = `${utenteLoggato.universita} (${utenteLoggato.sede})`;
+  document.getElementById("dash-info-profilo").textContent = `${utenteLoggato.facolta} (${utenteLoggato.sede})`;
   document.getElementById("dash-user-elo").textContent = utenteLoggato.elo + " 🏆";
   aggiornaGraficaListaMaterie();
   mostraSchermata("dashboard");
@@ -1043,7 +1033,7 @@ document.getElementById("btn-go-guest").addEventListener("click", () => {
   // Profilo fittizio
   utenteLoggato = { 
     username: "Ospite_Demo", 
-    universita: "Uni Demo", 
+    facolta: "Uni Demo", 
     sede: "Polo Demo", 
     elo: 1000, 
     isGuest: true 
