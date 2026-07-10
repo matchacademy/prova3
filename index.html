@@ -61,23 +61,35 @@
       </button>
     </header>
 
-    <section id="screen-welcome" class="px-6 pt-12 pb-10 text-center hidden">
-      <div class="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center text-white font-display font-bold text-2xl mx-auto mb-6 shadow-md animate-bounce">MA</div>
-      <h1 class="text-3xl font-display font-bold leading-tight mb-2">Match Accademico</h1>
-      <p class="text-ink/60 text-sm mb-10">Trova compagni di studio, sfida la community nell'Arena dei Quiz e scala la classifica generale.</p>
-      
-      <div class="space-y-3">
-  <button id="btn-go-login" class="w-full bg-accent hover:bg-accent-dark text-white font-semibold py-3.5 rounded-2xl transition-colors shadow-sm">
-    Accedi al tuo profilo
-  </button>
-  <button id="btn-go-register" class="w-full bg-white border border-ink/10 hover:bg-gray-50 text-ink font-semibold py-3.5 rounded-2xl transition-colors">
-    Crea un nuovo profilo
-  </button>
-  <button id="btn-go-guest" class="w-full bg-ink/5 hover:bg-ink/10 text-ink font-semibold py-3.5 rounded-2xl transition-colors">
-    Entra come Guest (Demo)
-  </button>
-</div>
-    </section>
+    <section id="screen-welcome" class="px-6 pt-16 pb-10 flex flex-col items-center min-h-[90vh]">
+  <!-- Logo/Icona più grande e soft -->
+  <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center text-white font-display font-bold text-4xl mb-8 shadow-2xl shadow-accent/30">
+    MA
+  </div>
+
+  <div class="text-center mb-12">
+    <h1 class="text-4xl font-display font-bold text-ink mb-3 tracking-tight">Match Accademico</h1>
+    <p class="text-ink/60 text-base leading-relaxed px-2">Il tuo hub per scalare la classifica, trovare compagni e dominare la sessione.</p>
+  </div>
+  
+  <!-- Layout a blocchi per riempire lo spazio -->
+  <div class="w-full space-y-4 mt-auto">
+    <!-- Pulsante Primario (Full width) -->
+    <button id="btn-go-login" class="w-full bg-ink text-white font-bold py-4 rounded-2xl hover:scale-[1.02] transition-all shadow-lg text-lg">
+      Accedi al tuo profilo
+    </button>
+    
+    <!-- Pulsanti Secondari (Griglia 2x1) -->
+    <div class="grid grid-cols-2 gap-3">
+      <button id="btn-go-register" class="w-full bg-white border border-ink/10 font-semibold py-4 rounded-2xl hover:bg-paper transition-all">
+        Registrati
+      </button>
+      <button id="btn-go-guest" class="w-full bg-accent/10 text-accent border border-accent/20 font-semibold py-4 rounded-2xl hover:bg-accent/20 transition-all">
+        Modalità Demo
+      </button>
+    </div>
+  </div>
+</section>
 
     <section id="screen-login" class="px-6 pt-6 pb-10 hidden">
       <button id="btn-back-welcome-1" class="text-sm text-ink/40 hover:text-ink/70 mb-4">← Indietro</button>
