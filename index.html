@@ -8,7 +8,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght=500;600;700&family=Inter:wght=400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <script>
   tailwind.config = {
@@ -68,7 +68,6 @@ button:active {
     </header>
 
     <section id="screen-welcome" class="px-6 pt-16 pb-10 flex flex-col items-center min-h-[90vh]">
-  <!-- Logo/Icona più grande e soft -->
   <div class="w-24 h-24 rounded-3xl bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center text-white font-display font-bold text-4xl mb-8 shadow-2xl shadow-accent/30">
     MA
   </div>
@@ -78,14 +77,11 @@ button:active {
     <p class="text-ink/60 text-base leading-relaxed px-2">Il tuo hub per scalare la classifica, trovare compagni e dominare la sessione.</p>
   </div>
   
-  <!-- Layout a blocchi per riempire lo spazio -->
   <div class="w-full space-y-4 mt-auto">
-    <!-- Pulsante Primario (Full width) -->
     <button id="btn-go-login" class="w-full bg-ink text-white font-bold py-4 rounded-2xl hover:scale-[1.02] transition-all shadow-lg text-lg">
       Accedi al tuo profilo
     </button>
     
-    <!-- Pulsanti Secondari (Griglia 2x1) -->
     <div class="grid grid-cols-2 gap-3">
       <button id="btn-go-register" class="w-full bg-white border border-ink/10 font-semibold py-4 rounded-2xl hover:bg-paper transition-all">
         Registrati
@@ -484,6 +480,11 @@ function popolaSelettoreSemplice(id, placeholder, opzioni) {
 /* =====================================================================
    FASE 1: DOWNLOAD DATABASE OPZIONI UNIVERISITÀ
    ===================================================================== */
+// Elenco di riserva usato per la select "Sede/Polo" se il foglio "opzioni"
+// non contiene una colonna D con le sedi. Modifica pure questa lista con le
+// sedi reali del tuo ateneo.
+const ELENCO_SEDI_FALLBACK = ["Sede Centrale", "Polo Nord", "Polo Sud", "Polo Est", "Polo Ovest", "Online"];
+
 async function inizializzaOpzioniOnboarding() {
   try {
     const risposta = await fetch(URL_SHEET_OPZIONI);
@@ -495,22 +496,44 @@ async function inizializzaOpzioniOnboarding() {
 
     // Definiamo la variabile qui dentro
     window.mappaDatiFacolta = {}; 
+    const insiemeSedi = new Set();
 
     righe.forEach(riga => {
       const c = riga?.c || [];
       const facolta = c[0]?.v?.toString().trim();
       const materia = c[1]?.v?.toString().trim();
       const prof = c[2]?.v?.toString().trim();
+      // Colonna D (indice 3) opzionale: se il foglio "opzioni" ha una 4a
+      // colonna con la sede, la raccogliamo qui.
+      const sede = c[3]?.v?.toString().trim();
 
       if (facolta && materia && prof) {
         if (!window.mappaDatiFacolta[facolta]) window.mappaDatiFacolta[facolta] = {};
         if (!window.mappaDatiFacolta[facolta][materia]) window.mappaDatiFacolta[facolta][materia] = [];
         if (!window.mappaDatiFacolta[facolta][materia].includes(prof)) window.mappaDatiFacolta[facolta][materia].push(prof);
       }
+      if (sede) insiemeSedi.add(sede);
     });
 
     popolaSelettoreSemplice("input-facolta", "Seleziona facoltà...", Object.keys(window.mappaDatiFacolta));
-  } catch (err) { console.error("Errore init:", err); }
+
+    // BUG CORRETTO: la select "Sede/Polo" non veniva mai popolata, quindi
+    // restava bloccata sull'opzione disabilitata "Caricamento sedi..." e,
+    // essendo required, impediva l'invio del form di registrazione.
+    const elencoSedi = insiemeSedi.size > 0 ? Array.from(insiemeSedi).sort() : ELENCO_SEDI_FALLBACK;
+    popolaSelettoreSemplice("input-sede", "Seleziona sede...", elencoSedi);
+  } catch (err) {
+    console.error("Errore init:", err);
+    // Anche in caso di errore nel download delle opzioni, popoliamo la sede
+    // con l'elenco di riserva così il form resta comunque compilabile.
+    popolaSelettoreSemplice("input-sede", "Seleziona sede...", ELENCO_SEDI_FALLBACK);
+  } finally {
+    // BUG CORRETTO: il form di registrazione aveva la classe "hidden" fissa
+    // e non veniva MAI rivelato dopo il caricamento delle opzioni: per
+    // questo la schermata di registrazione risultava vuota/bloccata.
+    document.getElementById("onboarding-loading").classList.add("hidden");
+    document.getElementById("form-onboarding").classList.remove("hidden");
+  }
 }
 /* =====================================================================
    FASE 1.1: LOGIN UTENTE
@@ -667,9 +690,41 @@ document.getElementById("btn-apri-aggiungi").addEventListener("click", () => {
   const selectProf = document.getElementById("select-professore");
   selectProf.disabled = true; selectProf.className = "w-full py-3 px-4 rounded-2xl border border-ink/10 bg-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed";
   selectProf.innerHTML = '<option value="" disabled selected>Scegli prima una materia...</option>';
+
+  // BUG CORRETTO: select-materia non veniva mai riempita con le materie
+  // della facoltà dell'utente loggato, quindi il form era inutilizzabile.
+  const selectMateria = document.getElementById("select-materia");
+  const materieFacolta = (window.mappaDatiFacolta && utenteLoggato && window.mappaDatiFacolta[utenteLoggato.facolta])
+    ? Object.keys(window.mappaDatiFacolta[utenteLoggato.facolta])
+    : [];
+  selectMateria.innerHTML = '<option value="" disabled selected>Seleziona materia...</option>';
+  materieFacolta.forEach(materia => {
+    const el = document.createElement("option");
+    el.value = materia; el.textContent = materia;
+    selectMateria.appendChild(el);
+  });
+
   mostraSchermata("aggiungiMateria");
 });
 document.getElementById("btn-annulla-materia").addEventListener("click", () => mostraSchermata("dashboard"));
+
+// NUOVO: quando si sceglie la materia, popoliamo a cascata i professori
+// disponibili per quella materia (prima restava sempre disabilitata).
+document.getElementById("select-materia").addEventListener("change", (e) => {
+  const materiaScelta = e.target.value;
+  const selectProf = document.getElementById("select-professore");
+  const professori = (window.mappaDatiFacolta && utenteLoggato && window.mappaDatiFacolta[utenteLoggato.facolta] && window.mappaDatiFacolta[utenteLoggato.facolta][materiaScelta])
+    ? window.mappaDatiFacolta[utenteLoggato.facolta][materiaScelta]
+    : [];
+  selectProf.innerHTML = '<option value="" disabled selected>Seleziona professore...</option>';
+  professori.forEach(prof => {
+    const el = document.createElement("option");
+    el.value = prof; el.textContent = prof;
+    selectProf.appendChild(el);
+  });
+  selectProf.disabled = professori.length === 0;
+  selectProf.className = "w-full py-3 px-4 rounded-2xl border border-ink/10 bg-white outline-none text-sm focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100";
+});
 
 document.getElementById("form-aggiungi-materia").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -817,7 +872,7 @@ function aggiornaListaBuddyHub() {
       <div class="min-w-0">
         <p class="font-semibold truncate">@${escapeHtml(b.username)}</p>
         <span class="inline-block text-[10px] font-bold text-accent bg-accent/5 px-1.5 py-0.5 rounded mb-1">${escapeHtml(b.statoStudio)}</span>
-        <p class="text-xs text-ink/60 italic leading-snug truncate">“${escapeHtml(bioTrovata)}”</p>
+        <p class="text-xs text-ink/60 italic leading-snug truncate">"${escapeHtml(bioTrovata)}"</p>
       </div>
       <a href="https://t.me/${encodeURIComponent(b.username)}" target="_blank" rel="noopener" class="shrink-0 bg-mint/10 text-mint font-semibold text-xs px-3.5 py-2.5 rounded-xl hover:bg-mint/20 transition-colors">Contatta</a>
     `;
@@ -867,7 +922,7 @@ async function caricaEVisualizzaConsigliExtra() {
       };
     }).filter(x => x.materia === materiaAttivaNorm && x.testo !== "");
 
-    loading.classList.add("hidden");
+    loading.classList.remove("hidden");
     if (consigliTrovati.length === 0) { empty.classList.remove("hidden"); return; }
 
     consigliTrovati.forEach(item => {
