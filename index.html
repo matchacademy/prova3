@@ -34,6 +34,12 @@
 </script>
 
 <style>
+  button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+button:active {
+  transform: scale(0.97);
+}
   body { font-family: 'Inter', sans-serif; }
   h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
   .timer-bar { transition: width 1s linear, background-color 0.3s ease; }
