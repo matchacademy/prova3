@@ -156,11 +156,11 @@ button:active {
         </div>
 
         <div>
-          <label class="block text-sm font-semibold mb-1" for="input-universita">Università</label>
-          <select id="input-universita" required class="w-full py-3 px-4 rounded-2xl border border-ink/10 bg-white outline-none text-sm focus:ring-2 focus:ring-accent">
-            <option value="" disabled selected>Caricamento università...</option>
-          </select>
-        </div>
+  <label class="block text-sm font-semibold mb-1" for="input-facolta">Facoltà</label>
+  <select id="input-facolta" required class="w-full py-3 px-4 rounded-2xl border border-ink/10 bg-white outline-none text-sm focus:ring-2 focus:ring-accent">
+    <option value="" disabled selected>Seleziona facoltà...</option>
+  </select>
+</div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -483,57 +483,43 @@ async function inizializzaOpzioniOnboarding() {
     const json = JSON.parse(testo.substring(inizio, fine + 1));
     const righe = json.table.rows || [];
 
-    let universitaSet = new Set(); let sediSet = new Set();
-    mappaMaterieProfessori = {}; 
+    let mappaDatiFacolta = {}; // Struttura: { "Medicina": { "Anatomia": ["Prof. Rossi"], "Fisiologia": ["Prof. Bianchi"] } }
+
+async function inizializzaOpzioniOnboarding() {
+  try {
+    const risposta = await fetch(URL_SHEET_OPZIONI);
+    const testo = await risposta.text();
+    const inizio = testo.indexOf("{"); const fine = testo.lastIndexOf("}");
+    const json = JSON.parse(testo.substring(inizio, fine + 1));
+    const righe = json.table.rows || [];
+
+    mappaDatiFacolta = {}; 
 
     righe.forEach(riga => {
-      const c = riga?.c || []; 
-      if (c[0]?.v) {
-        const uniVal = c[0].v.toString().trim();
-        if (uniVal.toLowerCase() !== "universita" && uniVal.toLowerCase() !== "università") universitaSet.add(uniVal);
-      }
-      if (c[3]?.v) {
-        const sedeVal = c[3].v.toString().trim();
-        if (sedeVal.toLowerCase() !== "sede") sediSet.add(sedeVal);
-      }
-      if (c[1]?.v && c[2]?.v) {
-        const materiaVal = c[1].v.toString().trim();
-        const profVal = c[2].v.toString().trim();
-        if (materiaVal.toLowerCase() !== "materia" && profVal.toLowerCase() !== "professore") {
-          if (!mappaMaterieProfessori[materiaVal]) mappaMaterieProfessori[materiaVal] = [];
-          if (!mappaMaterieProfessori[materiaVal].includes(profVal)) mappaMaterieProfessori[materiaVal].push(profVal);
-        }
+      const c = riga?.c || [];
+      const facolta = c[0]?.v?.toString().trim();
+      const materia = c[1]?.v?.toString().trim();
+      const prof = c[2]?.v?.toString().trim();
+
+      if (facolta && materia && prof) {
+        if (!mappaDatiFacolta[facolta]) mappaDatiFacolta[facolta] = {};
+        if (!mappaDatiFacolta[facolta][materia]) mappaDatiFacolta[facolta][materia] = [];
+        if (!mappaDatiFacolta[facolta][materia].includes(prof)) mappaDatiFacolta[facolta][materia].push(prof);
       }
     });
 
-    popolaSelettoreSemplice("input-universita", "Seleziona l'ateneo...", universitaSet);
-    popolaSelettoreSemplice("input-sede", "Scegli polo...", sediSet);
-    popolaSelettoreSemplice("select-materia", "Scegli la materia...", Object.keys(mappaMaterieProfessori));
-
-    document.getElementById("onboarding-loading").classList.add("hidden");
-    document.getElementById("form-onboarding").classList.remove("hidden");
-  } catch (err) { document.getElementById("onboarding-loading").innerHTML = "<p class='text-coral text-sm'>Errore cloud server. Riprova.</p>"; }
+    // Popola il menu facoltà
+    popolaSelettoreSemplice("input-facolta", "Seleziona facoltà...", Object.keys(mappaDatiFacolta));
+  } catch (err) { console.error("Errore init:", err); }
 }
 
-document.getElementById("select-materia").addEventListener("change", (e) => {
-  const materiaSelezionata = e.target.value;
-  const selectProf = document.getElementById("select-professore");
-  if (materiaSelezionata && mappaMaterieProfessori[materiaSelezionata]) {
-    selectProf.disabled = false; selectProf.className = "w-full py-3 px-4 rounded-2xl border border-ink/10 bg-white outline-none text-sm focus:ring-2 focus:ring-accent";
-    popolaSelettoreSemplice("select-professore", "Scegli il docente...", mappaMaterieProfessori[materiaSelezionata]);
-  } else {
-    selectProf.disabled = true; selectProf.className = "w-full py-3 px-4 rounded-2xl border border-ink/10 bg-gray-100 outline-none text-sm disabled:opacity-50 disabled:cursor-not-allowed";
-    selectProf.innerHTML = '<option value="" disabled selected>Scegli prima una materia...</option>';
-  }
+// Quando cambi Facoltà -> si sbloccano le materie
+document.getElementById("input-facolta").addEventListener("change", (e) => {
+  const facolta = e.target.value;
+  // Qui popoli il menu materie nella Dashboard quando l'utente vuole aggiungere un esame
+  const selectMateria = document.getElementById("select-materia");
+  popolaSelettoreSemplice("select-materia", "Scegli materia...", Object.keys(mappaDatiFacolta[facolta]));
 });
-
-function popolaSelettoreSemplice(id, placeholder, dati) {
-  const select = document.getElementById(id);
-  select.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
-  Array.from(dati).sort().forEach(val => {
-    const opt = document.createElement("option");
-    opt.value = val; opt.textContent = val; select.appendChild(opt);
-  });
 }
 
 /* =====================================================================
